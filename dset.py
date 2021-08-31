@@ -1,5 +1,5 @@
-import pandas as pd
 import os
+import pandas as pd
 
 import torch
 import torch.cuda
@@ -36,24 +36,11 @@ def convert_embarked(row):
     else:
         return 2
 
-"""
-Todo: Add isTest param, if false (None, row) else (review.loc[i, 'survived'],
-row)
+class TitanicDataset(Dataset):
+    def __init__(self, isTrain):
+        self.isTrain = isTrain
+        self.data = load_data('input')['train'] if isTrain else load_data('input')['test']
 
-
-1) drop and seperate survived column
-2) convert Pclass to {0,1,2}
-3) convert Name to {Mr: 0, Miss: 1, Mrs: 2, Master: 3, other: 4}
-4) convert Sex to {male: 0, female: 0}
-5) drop Ticket and Cabin
-6) embarked.fillna(embarked.mode())
-7) age.fillna(age.median())
-8) fare.fillna(fare.mode())
-9) convert everything to tensors
-"""
-class titanic_dataset(Dataset):
-    def __init__(self, type):
-        self.data = load_data('input')[type]
         self.data.drop(columns = ['Ticket', 'Cabin'], inplace = True)
 
         self.data.Embarked.fillna(self.data.Embarked.mode()[0], inplace = True)
@@ -65,14 +52,27 @@ class titanic_dataset(Dataset):
         self.data.Sex = self.data.apply(convert_sex, axis = 1)
         self.data.Embarked = self.data.apply(convert_embarked, axis = 1)
 
+        if isTrain:
+            self.survived = self.data.Survived
+            self.survived = torch.from_numpy(self.survived.values.astype('long'))
+
+            self.data.drop(columns = 'Survived')
+
+        self.data = torch.from_numpy(self.data.values.astype('float32'))
+
     def __len__(self):
-        return self.data.shape[0]
+        return int(self.data.shape[0] / 64) + 1
 
     def __getitem__(self, idx):
-        return self.data.iloc[idx]
+        startidx = min(idx*64, self.data.shape[0]-1)
+        endidx = min((idx+1)*64, self.data.shape[0]-1)
+
+        if self.isTrain:
+            return (self.survived[startidx: endidx + 1], self.data[startidx: endidx + 1])
+        return self.data[startidx: endidx + 1]
 
 def main():
-    data = titanic_dataset('train')
+    data = TitanicDataset(isTrain = False)
     print(data[5])
 
 if __name__ == '__main__':
