@@ -16,5 +16,5 @@ class TitanicModel(nn.Module):
     def forward(self, x):
         out = torch.relu(self.batch_norm1(self.fc1(x)))
         out = torch.relu(self.batch_norm2(self.fc2(out)))
-        out = torch.sigmoid(self.batch.fc3(out))
+        out = torch.sigmoid(self.fc3(out))
         return out
