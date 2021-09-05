@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 class TitanicModel(nn.Module):
-    def __init__(self, in_chans):
+    def __init__(self, in_chans = 8):
         super().__init__()
 
         self.fc1 = nn.Linear(in_chans, 10)
