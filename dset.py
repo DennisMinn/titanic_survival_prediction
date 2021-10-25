@@ -37,13 +37,11 @@ def convert_embarked(row):
         return 2
 
 class TitanicDataset(Dataset):
-    def __init__(self, is_train, batch_size):
+    def __init__(self, is_train = True, batch_size = 64):
         self.is_train = is_train
         self.data = load_data('input')['train'] if is_train else load_data('input')['test']
 
         self.data.drop(columns = ['Ticket', 'Cabin'], inplace = True)
-
-        self.n_cols = self.data.shape[1]
 
         self.data.Embarked.fillna(self.data.Embarked.mode()[0], inplace = True)
         self.data.Age.fillna(self.data.Age.median(), inplace = True)
@@ -55,27 +53,22 @@ class TitanicDataset(Dataset):
         self.data.Embarked = self.data.apply(convert_embarked, axis = 1)
 
         if is_train:
-            self.survived = self.data.Survived
-            self.survived = torch.from_numpy(self.survived.values.astype('long'))
-            self.survived = self.survived.split(64)
+            self.y = self.data.Survived
+            self.y = torch.from_numpy(self.y.values).long()
+            self.y = self.y.split(64)
 
-            self.data.drop(columns = 'Survived')
+            self.data.drop(columns = 'Survived', inplace = True)
 
-        self.data = torch.from_numpy(self.data.values.astype('float32'))
-        self.data = self.data.split(64)
+        self.n_cols = self.data.shape[1]
+        self.X = torch.from_numpy(self.data.values.astype('float32'))
+        self.X = self.X.split(batch_size)
 
     def __len__(self):
-        return len(self.data)
+        return len(self.X)
 
     def __getitem__(self, idx):
         if self.is_train:
-            return self.survived[idx], self.data[idx]
+            return self.y[idx], self.X[idx]
         else:
-            return self.data[idx]
+            return self.X[idx]
 
-def main():
-    data = TitanicDataset(is_train = False)
-    print(data[5])
-
-if __name__ == '__main__':
-    main()
